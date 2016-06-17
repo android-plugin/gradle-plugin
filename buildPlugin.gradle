@@ -1,6 +1,14 @@
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:2.1.2'
+    }
+}
 
 //-----------------------------------以下为生成插件Zip包部分---------------------------------
 
@@ -37,7 +45,7 @@ def getApplicationId() {
 def getAndroidPlugin(){
     def plugin = project.plugins.findPlugin('com.android.application') ?:
             project.plugins.findPlugin('com.android.library')
-    return plugin as com.android.build.gradle.BasePlugin
+    return plugin
 }
 
 //获取插件版本号
