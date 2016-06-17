@@ -12,7 +12,7 @@ buildscript {
 
 //-----------------------------------以下为生成插件Zip包部分---------------------------------
 
-def pluginName = project.name
+def pluginName = getPluginName()
 def projectDir=project.getProjectDir().absolutePath
 def jarDir = pluginName + '/jar/'
 def jarName = "plugin_" + pluginName + ".jar"
@@ -62,6 +62,36 @@ def getPluginVersion(String pluginName) {
     return version
 }
 
+def getPluginName(){
+    def pluginName = ''
+    Pattern p = Pattern.compile("uexName=\"(.*?)\"")
+    File infoFile=getInfoFile()
+    Matcher m = p.matcher(infoFile.getText('UTF-8'))
+    if (m.find()) {
+        pluginName = m.group(1)
+        println("pluginName: " + pluginName)
+    }
+    return pluginName
+}
+
+def getInfoFile(){
+    File infoFile
+    project.getProjectDir().listFiles().each { file->
+        if (file.isDirectory()){
+            File[] files=file.listFiles(new FileFilter() {
+                @Override
+                boolean accept(File pathname) {
+                    return pathname.getName().equals("info.xml")
+                }
+            })
+            if (files!=null&&files.length>0){
+                infoFile=files[0]
+            }
+        }
+    }
+    println("info file:"+infoFile.absolutePath)
+    return infoFile
+}
 
 buildPlugin.doLast{
     def argsList =["--dex","--verbose","--no-strict","--output=$projectDir/$pluginName/dex/plugin_${pluginName}_dex.jar"]
