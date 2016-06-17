@@ -130,7 +130,7 @@ buildPlugin.doLast{
 
 //生成插件包
 task zipPlugin(type: Zip) {
-    baseName pluginName + "-" + getPluginVersion(pluginName)
+    baseName pluginName + "-android-" + getPluginVersion(pluginName)
     from(pluginName)
     into(pluginName)
     destinationDir = file('.');
