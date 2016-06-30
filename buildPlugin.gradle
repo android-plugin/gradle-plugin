@@ -30,9 +30,6 @@ task buildPlugin(type: Jar, dependsOn: ['compileReleaseJavaWithJavac']) {
     exclude('**/R.class')
     exclude('**/R\$*.class')
     exclude('**/BuildConfig.class')
-    if (applicationId != null) {
-        exclude(applicationId.replace('.', '/'))
-    }
 }
 
 buildPlugin.dependsOn(clearJar)
