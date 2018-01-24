@@ -99,7 +99,7 @@ buildPlugin.doLast{
     println(argsList)
     def dexJarTask=tasks.create("buildPluginTemp",Exec){
         workingDir "./$pluginName"
-        def androidSDKDir = getAndroidPlugin().sdkHandler.getSdkFolder().absolutePath
+        def androidSDKDir = project.android.sdkDirectory.absolutePath
         def androidToolDir=androidSDKDir+'/build-tools/'+"${android.buildToolsVersion}"+'/'
         if (System.getProperty('os.name').toLowerCase().contains('windows')) {
             commandLine androidToolDir+"dx.bat"
