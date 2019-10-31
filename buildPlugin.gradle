@@ -1,15 +1,6 @@
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
-buildscript {
-    repositories {
-        jcenter()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:2.1.2'
-    }
-}
-
 //-----------------------------------以下为生成插件Zip包部分---------------------------------
 
 def pluginName = getPluginName()
@@ -18,12 +9,19 @@ def jarDir = pluginName + '/jar/'
 def jarName = "plugin_" + pluginName + ".jar"
 def jarPath = jarDir + jarName
 
-task clearJar(type: Delete) {
-    delete jarPath;
+// 主任务，以此为基准
+task buildPlugin(){
+    println("=== buildPlugin processing ===")
 }
 
-task buildPlugin(type: Jar, dependsOn: ['compileReleaseJavaWithJavac']) {
-    def applicationId = getApplicationId();
+// 清理jar包
+task clearJar(type: Delete) {
+    delete jarPath
+}
+
+// 将插件代码编译为jar包输出到插件包目录中
+task tempBuildPluginJar(type: Jar, dependsOn: ['compileReleaseJavaWithJavac']) {
+    def applicationId = getApplicationId()
     archiveName jarName
     from('build/intermediates/classes/release/')
     destinationDir = file(jarDir)
@@ -32,7 +30,76 @@ task buildPlugin(type: Jar, dependsOn: ['compileReleaseJavaWithJavac']) {
     exclude('**/BuildConfig.class')
 }
 
-buildPlugin.dependsOn(clearJar)
+tempBuildPluginJar.dependsOn(clearJar)
+
+tempBuildPluginJar.doFirst{
+    println '== compileJars start=='
+}
+
+tempBuildPluginJar.doLast{
+    println '== compileJars  end=='
+}
+
+// 编译插件代码为dex，兼容IDE打包
+task tempBuildPluginDex(type: Exec){
+    workingDir "./$pluginName"
+    def argsList =["--dex","--verbose","--no-strict","--output=$projectDir/$pluginName/dex/plugin_${pluginName}_dex.jar"]
+    new File(projectDir,"$pluginName/jar").listFiles().each { file ->
+        argsList.add(file.absolutePath)
+        println(file.absolutePath)
+    }
+    println(argsList)
+    def androidSDKDir = project.android.sdkDirectory.absolutePath
+    def androidToolDir=androidSDKDir+'/build-tools/'+"${android.buildToolsVersion}"+'/'
+    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+        commandLine androidToolDir+"dx.bat"
+    } else {
+        commandLine androidToolDir+"dx"
+    }
+    args argsList
+    standardOutput = new ByteArrayOutputStream()
+}
+
+tempBuildPluginDex.onlyIf{
+    File jarFile = new File(jarPath)
+    if (!jarFile.exists()){
+        println "tempBuildPluginDex: jarFile is not exist!!!"
+        return false
+    }
+    println "tempBuildPluginDex: onlyIf true"
+    return true
+}
+
+tempBuildPluginDex.doFirst{
+    println '== dexJars start=='
+    File dexDir=new File(projectDir,"$pluginName/dex")
+    if (!dexDir.exists()){
+        dexDir.mkdir()
+    }
+}
+
+tempBuildPluginDex.doLast{
+    println standardOutput
+    println '== dexJars  end=='
+}
+
+//生成插件包
+task zipPlugin(type: Zip) {
+    println '== zipPlugin  processing =='
+    baseName pluginName + "-android-" + getPluginVersion(pluginName)
+    from(pluginName)
+    into(pluginName)
+    destinationDir = file('.')
+}
+
+buildPlugin.dependsOn tempBuildPluginJar
+buildPlugin.dependsOn tempBuildPluginDex
+buildPlugin.dependsOn zipPlugin
+tempBuildPluginDex.mustRunAfter(tempBuildPluginJar)
+zipPlugin.mustRunAfter tempBuildPluginDex
+zipPlugin.mustRunAfter tempBuildPluginJar
+
+//-----------------------------------以下是辅助方法-----------------------------------
 
 //获取应用Id
 def getApplicationId() {
@@ -88,47 +155,4 @@ def getInfoFile(){
     }
     println("info file:"+infoFile.absolutePath)
     return infoFile
-}
-
-buildPlugin.doLast{
-    def argsList =["--dex","--verbose","--no-strict","--output=$projectDir/$pluginName/dex/plugin_${pluginName}_dex.jar"]
-    new File(projectDir,"$pluginName/jar").listFiles().each { file ->
-        argsList.add(file.absolutePath)
-        println(file.absolutePath)
-    }
-    println(argsList)
-    def dexJarTask=tasks.create("buildPluginTemp",Exec){
-        workingDir "./$pluginName"
-        def androidSDKDir = project.android.sdkDirectory.absolutePath
-        def androidToolDir=androidSDKDir+'/build-tools/'+"${android.buildToolsVersion}"+'/'
-        if (System.getProperty('os.name').toLowerCase().contains('windows')) {
-            commandLine androidToolDir+"dx.bat"
-        } else {
-            commandLine androidToolDir+"dx"
-        }
-        args argsList
-        standardOutput = new ByteArrayOutputStream()
-    }
-    dexJarTask.doFirst{
-        println '== dexJars start=='
-        File dexDir=new File(projectDir,"$pluginName/dex")
-        if (!dexDir.exists()){
-            dexDir.mkdir()
-        }
-    }
-    dexJarTask.doLast{
-        println standardOutput
-        println '== dexJars  end=='
-        def zipTask=tasks.findByName("zipPlugin")
-        zipTask.execute()
-    }
-    dexJarTask.execute()
-}
-
-//生成插件包
-task zipPlugin(type: Zip) {
-    baseName pluginName + "-android-" + getPluginVersion(pluginName)
-    from(pluginName)
-    into(pluginName)
-    destinationDir = file('.');
 }
