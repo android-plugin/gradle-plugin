@@ -3,6 +3,7 @@ import java.util.regex.Pattern
 
 //-----------------------------------以下为生成插件Zip包部分---------------------------------
 
+def SCRIPT_VERSION = "1.9.0"
 def pluginName = getPluginName()
 def projectDir=project.getProjectDir().absolutePath
 def jarDir = pluginName + '/jar/'
@@ -12,6 +13,18 @@ def jarPath = jarDir + jarName
 // 主任务，以此为基准
 task buildPlugin(){
     println("=== buildPlugin processing ===")
+    println("=== SCRIPT_VERSION $SCRIPT_VERSION ===")
+}
+
+// 另一个主任务，禁用了dex编译逻辑
+task buildPluginWithoutDex(){
+    println("=== buildPluginWithoutDex processing ===")
+    println("=== SCRIPT_VERSION $SCRIPT_VERSION ===")
+    File dexDir = new File(projectDir, "$pluginName/dex")
+    if (dexDir.exists()){
+        dexDir.deleteDir()
+        println("=== buildPluginWithoutDex dex files has been deleted ===")
+    }
 }
 
 // 清理jar包
@@ -97,6 +110,10 @@ buildPlugin.dependsOn tempBuildPluginDex
 buildPlugin.dependsOn zipPlugin
 tempBuildPluginDex.mustRunAfter(tempBuildPluginJar)
 zipPlugin.mustRunAfter tempBuildPluginDex
+zipPlugin.mustRunAfter tempBuildPluginJar
+
+buildPluginWithoutDex.dependsOn tempBuildPluginJar
+buildPluginWithoutDex.dependsOn zipPlugin
 zipPlugin.mustRunAfter tempBuildPluginJar
 
 //-----------------------------------以下是辅助方法-----------------------------------
