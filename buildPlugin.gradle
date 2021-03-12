@@ -3,7 +3,7 @@ import java.util.regex.Pattern
 
 //-----------------------------------以下为生成插件Zip包部分---------------------------------
 
-def SCRIPT_VERSION = "1.9.0"
+def SCRIPT_VERSION = "1.10.0"
 def pluginName = getPluginName()
 def projectDir=project.getProjectDir().absolutePath
 def jarDir = pluginName + '/jar/'
@@ -36,7 +36,8 @@ task clearJar(type: Delete) {
 task tempBuildPluginJar(type: Jar, dependsOn: ['compileReleaseJavaWithJavac']) {
     def applicationId = getApplicationId()
     archiveName jarName
-    from('build/intermediates/classes/release/')
+    // from此处暂不定义，移动到doFirst中根据不同情况来确定
+    //    from(classesDir)
     destinationDir = file(jarDir)
     exclude('**/R.class')
     exclude('**/R\$*.class')
@@ -47,6 +48,20 @@ tempBuildPluginJar.dependsOn(clearJar)
 
 tempBuildPluginJar.doFirst{
     println '== compileJars start=='
+    // 这里是tempBuildPluginJar任务执行之前，而compileReleaseJavaWithJavac已经执行完成，因此可以判断此时的build输出目录结构来决定classes生成在哪里了
+    // 4.1.2路径
+    String classesDir = 'build/intermediates/javac/release/classes/'
+    if (!file(classesDir).exists()){
+        // 3.x路径
+        classesDir = 'build/intermediates/classes/release/'
+        println("===tempBuildPluginJar doFirst classes dir is old version ===")
+    }
+    if (!file(classesDir).exists()){
+        // 无法识别的路径
+        println("===tempBuildPluginJar doFirst classes dir NOT FOUND ERROR!!! ===")
+    }
+    tempBuildPluginJar.from(classesDir)
+    println("===tempBuildPluginJar doFirst classes dir ===" + classesDir)
 }
 
 tempBuildPluginJar.doLast{
