@@ -3,7 +3,8 @@ import java.util.regex.Pattern
 
 //-----------------------------------以下为生成插件Zip包部分---------------------------------
 
-def SCRIPT_VERSION = "1.10.0"
+def SCRIPT_VERSION = "1.11.0 - 20230311 by zyp"
+def SCRIPT_VERSION_DESC = "适配gradle 8.0.2 和 android gradle build tools 7.4.2"
 def pluginName = getPluginName()
 def projectDir=project.getProjectDir().absolutePath
 def jarDir = pluginName + '/jar/'
@@ -14,12 +15,14 @@ def jarPath = jarDir + jarName
 task buildPlugin(){
     println("=== buildPlugin processing ===")
     println("=== SCRIPT_VERSION $SCRIPT_VERSION ===")
+    println("=== SCRIPT_VERSION_DESC $SCRIPT_VERSION_DESC ===")
 }
 
 // 另一个主任务，禁用了dex编译逻辑
 task buildPluginWithoutDex(){
     println("=== buildPluginWithoutDex processing ===")
     println("=== SCRIPT_VERSION $SCRIPT_VERSION ===")
+    println("=== SCRIPT_VERSION_DESC $SCRIPT_VERSION_DESC ===")
     File dexDir = new File(projectDir, "$pluginName/dex")
     if (dexDir.exists()){
         dexDir.deleteDir()
@@ -34,11 +37,8 @@ task clearJar(type: Delete) {
 
 // 将插件代码编译为jar包输出到插件包目录中
 task tempBuildPluginJar(type: Jar, dependsOn: ['compileReleaseJavaWithJavac']) {
-    def applicationId = getApplicationId()
-    archiveName jarName
-    // from此处暂不定义，移动到doFirst中根据不同情况来确定
-    //    from(classesDir)
-    destinationDir = file(jarDir)
+    setArchiveFileName(jarName)
+    setDestinationDirectory(file(jarDir))
     exclude('**/R.class')
     exclude('**/R\$*.class')
     exclude('**/BuildConfig.class')
@@ -114,10 +114,10 @@ tempBuildPluginDex.doLast{
 //生成插件包
 task zipPlugin(type: Zip) {
     println '== zipPlugin  processing =='
-    baseName pluginName + "-android-" + getPluginVersion(pluginName)
+    setArchiveBaseName(pluginName + "-android-" + getPluginVersion(pluginName))
     from(pluginName)
     into(pluginName)
-    destinationDir = file('.')
+    setDestinationDirectory(file('.'))
 }
 
 buildPlugin.dependsOn tempBuildPluginJar
